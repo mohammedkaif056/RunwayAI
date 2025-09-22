@@ -8,6 +8,117 @@ import { storage } from "./storage";
 import { insertUserSchema, insertCompanySchema, insertAccountSchema, insertTransactionSchema, insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
 
+// Enhanced mock data generators for realistic Plaid simulation
+function generateRealisticBalance(accountType: string): string {
+  switch (accountType) {
+    case "checking":
+      return (Math.random() * 15000 + 1000).toFixed(2); // $1k-$16k
+    case "savings":
+      return (Math.random() * 50000 + 5000).toFixed(2); // $5k-$55k
+    case "credit":
+      return (Math.random() * 2000).toFixed(2); // $0-$2k (credit card balance)
+    default:
+      return (Math.random() * 25000 + 2000).toFixed(2);
+  }
+}
+
+function generateRealisticTransactions(accountId: string, userId: string, accountType: string) {
+  const transactions = [];
+  const categories = ["Engineering", "Marketing", "Operations", "Sales", "Legal", "Office & Equipment", "Travel", "Revenue"];
+  
+  // Startup-specific transaction templates
+  const expenseTemplates = [
+    { desc: "AWS Services", category: "Engineering", minAmount: 500, maxAmount: 3000 },
+    { desc: "Google Cloud Platform", category: "Engineering", minAmount: 200, maxAmount: 1500 },
+    { desc: "GitHub Enterprise", category: "Engineering", minAmount: 100, maxAmount: 500 },
+    { desc: "Figma Team Plan", category: "Engineering", minAmount: 50, maxAmount: 200 },
+    { desc: "Office Rent", category: "Operations", minAmount: 2000, maxAmount: 8000 },
+    { desc: "Internet & Utilities", category: "Operations", minAmount: 200, maxAmount: 600 },
+    { desc: "Legal Services", category: "Legal", minAmount: 500, maxAmount: 5000 },
+    { desc: "Accounting Services", category: "Operations", minAmount: 300, maxAmount: 1500 },
+    { desc: "Marketing Tools", category: "Marketing", minAmount: 100, maxAmount: 1000 },
+    { desc: "Social Media Ads", category: "Marketing", minAmount: 500, maxAmount: 3000 },
+    { desc: "Conference Tickets", category: "Marketing", minAmount: 300, maxAmount: 2000 },
+    { desc: "Team Lunch", category: "Operations", minAmount: 50, maxAmount: 300 },
+    { desc: "Software Licenses", category: "Engineering", minAmount: 100, maxAmount: 1000 },
+    { desc: "Hardware & Equipment", category: "Office & Equipment", minAmount: 500, maxAmount: 3000 },
+    { desc: "Travel Expenses", category: "Travel", minAmount: 200, maxAmount: 2000 },
+  ];
+
+  const incomeTemplates = [
+    { desc: "Customer Payment", category: "Revenue", minAmount: 1000, maxAmount: 10000 },
+    { desc: "Subscription Revenue", category: "Revenue", minAmount: 500, maxAmount: 5000 },
+    { desc: "Consulting Services", category: "Revenue", minAmount: 2000, maxAmount: 15000 },
+    { desc: "Grant Funding", category: "Revenue", minAmount: 5000, maxAmount: 50000 },
+    { desc: "Investment Round", category: "Revenue", minAmount: 25000, maxAmount: 500000 },
+  ];
+
+  // Generate transactions for the past 90 days
+  for (let daysAgo = 90; daysAgo >= 0; daysAgo--) {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    
+    // Skip weekends for business transactions (70% chance)
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    if (isWeekend && Math.random() < 0.7) continue;
+    
+    // 60% chance of expense, 40% chance of income (startup burn pattern)
+    const isExpense = Math.random() < 0.6;
+    const templates = isExpense ? expenseTemplates : incomeTemplates;
+    const template = templates[Math.floor(Math.random() * templates.length)];
+    
+    // Vary amounts slightly
+    const amount = (Math.random() * (template.maxAmount - template.minAmount) + template.minAmount).toFixed(2);
+    
+    transactions.push({
+      accountId,
+      userId,
+      amount: isExpense ? `-${amount}` : amount,
+      description: template.desc,
+      category: template.category,
+      date,
+      type: isExpense ? "expense" as const : "income" as const,
+      externalId: `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      isRecurring: ["Office Rent", "Internet & Utilities", "Software Licenses"].includes(template.desc),
+    });
+  }
+
+  return transactions;
+}
+
+function generateNewTransactions(accountId: string, userId: string, accountType: string) {
+  const transactions = [];
+  const recentTemplates = [
+    { desc: "AWS Services", category: "Engineering", amount: "847.23", type: "expense" as const },
+    { desc: "Stripe Processing Fees", category: "Operations", amount: "45.67", type: "expense" as const },
+    { desc: "Customer Payment - Acme Corp", category: "Revenue", amount: "2500.00", type: "income" as const },
+    { desc: "Google Workspace", category: "Operations", amount: "72.00", type: "expense" as const },
+    { desc: "Team Lunch - Pizza", category: "Operations", amount: "89.43", type: "expense" as const },
+  ];
+
+  // Generate 1-3 new transactions since last sync
+  const numTransactions = Math.floor(Math.random() * 3) + 1;
+  
+  for (let i = 0; i < numTransactions; i++) {
+    const template = recentTemplates[Math.floor(Math.random() * recentTemplates.length)];
+    const hoursAgo = Math.floor(Math.random() * 24) + 1; // 1-24 hours ago
+    const date = new Date(Date.now() - (hoursAgo * 60 * 60 * 1000));
+    
+    transactions.push({
+      accountId,
+      userId,
+      amount: template.type === "expense" ? `-${template.amount}` : template.amount,
+      description: template.desc,
+      category: template.category,
+      date,
+      type: template.type,
+      externalId: `sync_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    });
+  }
+
+  return transactions;
+}
+
 // Configure Passport
 passport.use(new LocalStrategy(
   { usernameField: 'email' },
@@ -309,18 +420,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simulated Plaid account connection
+  // Enhanced simulated Plaid account connection
   app.post('/api/connect-account', requireAuth, async (req, res) => {
     try {
       const user = req.user as any;
       const { bankName, accountType } = req.body;
       
-      // Simulate Plaid connection with mock data
+      // Simulate Plaid connection with more realistic mock data
       const mockAccount = {
         userId: user.id,
         name: `${bankName} ${accountType}`,
         type: accountType,
-        balance: (Math.random() * 50000 + 1000).toString(), // Random balance between $1k-$51k
+        balance: generateRealisticBalance(accountType),
         bankName,
         externalId: `mock_${Date.now()}`,
         accessToken: `mock_token_${Date.now()}`,
@@ -328,48 +439,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const account = await storage.createAccount(mockAccount);
       
-      // Generate some mock transactions
-      const mockTransactions = [
-        {
-          accountId: account.id,
-          userId: user.id,
-          amount: "-1247.50",
-          description: "AWS Services",
-          category: "Engineering",
-          date: new Date(Date.now() - 86400000), // Yesterday
-          type: "expense" as const,
-          externalId: `mock_tx_${Date.now()}_1`,
-        },
-        {
-          accountId: account.id,
-          userId: user.id,
-          amount: "-4200.00",
-          description: "Office Rent",
-          category: "Operations",
-          date: new Date(Date.now() - 172800000), // 2 days ago
-          type: "expense" as const,
-          externalId: `mock_tx_${Date.now()}_2`,
-        },
-        {
-          accountId: account.id,
-          userId: user.id,
-          amount: "2850.00",
-          description: "Customer Payment",
-          category: "Revenue",
-          date: new Date(Date.now() - 259200000), // 3 days ago
-          type: "income" as const,
-          externalId: `mock_tx_${Date.now()}_3`,
-        },
-      ];
+      // Generate realistic transaction history for the past 3 months
+      const mockTransactions = generateRealisticTransactions(account.id, user.id, accountType);
       
       for (const tx of mockTransactions) {
         await storage.createTransaction(tx);
       }
       
-      res.json({ account, message: 'Account connected successfully' });
+      res.json({ 
+        account, 
+        transactionCount: mockTransactions.length,
+        message: 'Account connected successfully with transaction history' 
+      });
     } catch (error) {
       console.error('Connect account error:', error);
       res.status(500).json({ message: 'Failed to connect account' });
+    }
+  });
+
+  // Account sync functionality
+  app.post('/api/accounts/:id/sync', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { id: accountId } = req.params;
+      
+      // Get the account
+      const account = await storage.getAccount(accountId);
+      if (!account || account.userId !== user.id) {
+        return res.status(404).json({ message: 'Account not found' });
+      }
+      
+      // Simulate fetching new transactions from bank
+      const newTransactions = generateNewTransactions(accountId, user.id, account.type);
+      const addedTransactions = [];
+      
+      for (const tx of newTransactions) {
+        try {
+          const created = await storage.createTransaction(tx);
+          addedTransactions.push(created);
+        } catch (error) {
+          // Skip if transaction already exists (duplicate externalId)
+          console.log('Transaction already exists, skipping');
+        }
+      }
+      
+      // Update account balance
+      const balanceChange = addedTransactions.reduce((sum, tx) => {
+        const amount = parseFloat(tx.amount);
+        return sum + (tx.type === 'income' ? amount : -Math.abs(amount));
+      }, 0);
+      
+      const newBalance = (parseFloat(account.balance) + balanceChange).toString();
+      await storage.updateAccount(accountId, { balance: newBalance });
+      
+      res.json({ 
+        newTransactions: addedTransactions.length,
+        balanceChange,
+        newBalance: parseFloat(newBalance),
+        message: `Synced ${addedTransactions.length} new transactions` 
+      });
+    } catch (error) {
+      console.error('Account sync error:', error);
+      res.status(500).json({ message: 'Failed to sync account' });
     }
   });
 

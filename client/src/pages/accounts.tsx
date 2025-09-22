@@ -42,6 +42,30 @@ export default function Accounts() {
     },
   });
 
+  const syncAccountMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const response = await apiRequest("POST", `/api/accounts/${accountId}/sync`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/expense-breakdown"] });
+      toast({
+        title: "Success",
+        description: data.message || "Account synced successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sync account",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteAccount = (accountId: string) => {
     if (window.confirm("Are you sure you want to delete this account? This will also delete all associated transactions.")) {
       deleteAccountMutation.mutate(accountId);
@@ -192,6 +216,15 @@ export default function Accounts() {
                           >
                             <i className="fas fa-list w-3 h-3 mr-1"></i>
                             Transactions
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => syncAccountMutation.mutate(account.id)}
+                            disabled={syncAccountMutation.isPending}
+                            data-testid={`button-sync-account-${account.id}`}
+                          >
+                            <i className={`fas fa-sync-alt w-3 h-3 ${syncAccountMutation.isPending ? 'animate-spin' : ''}`}></i>
                           </Button>
                           <Button 
                             variant="outline" 
