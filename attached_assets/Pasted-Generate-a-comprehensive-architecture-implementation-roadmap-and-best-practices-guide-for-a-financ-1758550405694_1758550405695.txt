@@ -1,0 +1,125 @@
+Generate a comprehensive architecture, implementation roadmap, and best practices guide for a financial runway forecasting web application tailored to pre-seed startups, based on the following specification."
+
+📌 Prompt Body (Detailed Version)
+
+Using the comprehensive product and technical specification provided below, generate a detailed, structured plan for building a production-ready web application. The output should reflect industry best practices, architectural clarity, and maintainability, while optimizing for rapid prototyping, developer velocity, and future extensibility (freemium → paid plans).
+
+Your response should include and expand upon the following sections:
+
+1. Executive Summary (Rephrased & Enhanced)
+
+Clearly summarize the product purpose, target audience, and core value proposition.
+
+2. Tech Stack Justification
+
+Validate or refine the proposed tech stack.
+
+Suggest alternatives or improvements if applicable.
+
+Clarify why each technology was selected, focusing on dev speed, reliability, maintainability, and scaling potential.
+
+3. System Architecture (Updated Visual Model Optional)
+
+Break down each component: Frontend, Backend, Model Microservice, Database, Object Storage.
+
+Describe how data flows between these components.
+
+Include optional suggestions for messaging/queue systems (e.g., Redis, BullMQ) if needed.
+
+4. File & Repository Structure
+
+Expand and organize the given monorepo structure for long-term maintainability.
+
+Highlight separation of concerns, testing conventions, and modularity.
+
+5. Core Feature Mapping
+
+Map each major feature to its respective:
+
+UI components
+
+API endpoints
+
+Backend services
+
+Data models
+
+Third-party integrations (Plaid, Stripe)
+
+Describe user flows (e.g., connect → fetch → compute → display).
+
+6. Database Schema (Improved)
+
+Expand and normalize the provided schema with:
+
+Indexing suggestions
+
+Example seed data
+
+Optional support for multi-org (if future teams/multiple startups)
+
+Audit and history tracking (e.g., budget revisions)
+
+7. API Design (REST-first, but extendable)
+
+Define RESTful endpoints, including request/response schema.
+
+Include versioning, error handling standards, and webhook verification examples.
+
+8. Security, Compliance & Privacy Best Practices
+
+Address secure token storage (Plaid, Stripe).
+
+Detail webhook signature validation, secrets management.
+
+Ensure GDPR/data privacy and encryption-in-transit & at-rest.
+
+Suggest pentest-ready practices for production readiness.
+
+9. CI/CD, Deployment Strategy
+
+Define CI pipeline stages: lint, type-check, test, build, deploy.
+
+Specify deployment targets (Vercel, Render, AWS ECS, etc.).
+
+Include GitHub Actions setup, environment variable strategy, rollback.
+
+10. Testing & QA Strategy
+
+Unit, integration, E2E coverage suggestions.
+
+Sample tests for model determinism.
+
+Recommendations for mocking external APIs (Plaid, Stripe) using sandbox keys.
+
+11. Monitoring & Observability
+
+Detail which metrics/logs to collect.
+
+Tools: Sentry, Grafana, Prometheus, or alternatives.
+
+Alerting suggestions (e.g., webhook failures, model error rates).
+
+12. Roadmap and Milestone Plan (Agile Sprints)
+
+Break down the 6-week MVP into 4 sprints:
+
+Sprint goals
+
+Deliverables
+
+Dependencies
+
+Success criteria
+
+13. Risks & Mitigations
+
+Identify risks (data accuracy, API rate limits, categorization errors, compliance).
+
+Suggest mitigations (e.g., manual recategorization UX, fallback caching, retries).
+
+14. Final Developer Notes
+
+Tips to ensure clarity in model logic (pure function design).
+
+Recommendations for improving instant time-to-value for users.
