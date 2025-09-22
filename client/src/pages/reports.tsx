@@ -39,6 +39,12 @@ export default function Reports() {
 
   const generateReportMutation = useMutation({
     mutationFn: async (reportData: any) => {
+      // Show loading state with preview data
+      toast({
+        title: "Generating Report...",
+        description: "Creating your financial report with latest data",
+      });
+      
       const response = await apiRequest("POST", "/api/reports", reportData);
       return response.json();
     },
@@ -63,6 +69,7 @@ export default function Reports() {
         reportContent = JSON.stringify(reportData, null, 2);
       }
       
+      const fileExtension = reportFormat === "excel" ? "json" : reportFormat;
       const mimeType = reportFormat === "csv" ? "text/csv" : 
                       reportFormat === "excel" ? "application/json" : "text/plain";
       
@@ -75,6 +82,14 @@ export default function Reports() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      // Show success message with file size
+      setTimeout(() => {
+        toast({
+          title: "Download Complete",
+          description: `${data.fileName} (${(blob.size / 1024).toFixed(1)} KB) has been downloaded`,
+        });
+      }, 1000);
     },
     onError: (error: any) => {
       toast({

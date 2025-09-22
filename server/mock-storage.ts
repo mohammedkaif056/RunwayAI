@@ -10,9 +10,17 @@ class MockStorage {
   private budgets: any[] = [];
   private forecasts: any[] = [];
   private reports: any[] = [];
+  private initialized = false;
 
   constructor() {
-    this.initializeDemoData();
+    // Don't auto-initialize in constructor for serverless compatibility
+  }
+
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initializeDemoData();
+      this.initialized = true;
+    }
   }
 
   private async initializeDemoData() {
@@ -127,14 +135,17 @@ class MockStorage {
 
   // User methods
   async getUser(id: string) {
+    await this.ensureInitialized();
     return this.users.find(u => u.id === id);
   }
 
   async getUserByUsername(username: string) {
+    await this.ensureInitialized();
     return this.users.find(u => u.username === username);
   }
 
   async getUserByEmail(email: string) {
+    await this.ensureInitialized();
     return this.users.find(u => u.email === email);
   }
 
