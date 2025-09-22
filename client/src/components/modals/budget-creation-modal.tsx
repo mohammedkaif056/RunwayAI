@@ -27,7 +27,7 @@ export function BudgetCreationModal({ open, onOpenChange }: BudgetCreationModalP
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", "/api/budgets", {
         category: data.category,
-        monthlyLimit: parseFloat(data.monthlyLimit),
+        monthlyLimit: data.monthlyLimit, // Keep as string for decimal type
         alertThreshold: parseInt(data.alertThreshold),
       });
       return response.json();

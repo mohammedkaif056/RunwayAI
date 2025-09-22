@@ -8,6 +8,27 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/me"],
     retry: false,
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+        });
+        
+        if (response.status === 401) {
+          return null; // Not authenticated, which is fine
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.user || null;
+      } catch (error) {
+        console.log('Auth check failed:', error);
+        return null; // Return null instead of throwing to avoid hanging
+      }
+    },
   });
 
   const loginMutation = useMutation({

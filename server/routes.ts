@@ -187,6 +187,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.createUser(userData);
       
+      // Create demo data for new users
+      try {
+        await storage.createCompany({
+          userId: user.id,
+          name: "Your Startup",
+          stage: "pre-seed",
+          industry: "Technology",
+          teamSize: "5",
+        });
+
+        const demoAccount = await storage.createAccount({
+          userId: user.id,
+          name: "Business Checking",
+          type: "checking",
+          balance: "25000.00",
+          currency: "USD",
+          bankName: "Demo Bank",
+          isActive: true,
+          externalId: `demo_${user.id}`,
+          accessToken: `demo_token_${user.id}`,
+        });
+
+        // Add some demo transactions
+        const demoTransactions = [
+          { amount: "15000", description: "Seed Investment", category: "Revenue", type: "income" },
+          { amount: "-2500", description: "AWS Services", category: "Engineering", type: "expense" },
+          { amount: "-4000", description: "Office Rent", category: "Operations", type: "expense" },
+          { amount: "8000", description: "Client Payment", category: "Revenue", type: "income" },
+          { amount: "-1200", description: "Marketing Campaign", category: "Marketing", type: "expense" },
+        ];
+
+        for (const tx of demoTransactions) {
+          await storage.createTransaction({
+            accountId: demoAccount.id,
+            userId: user.id,
+            amount: tx.amount,
+            description: tx.description,
+            category: tx.category,
+            subcategory: null,
+            date: new Date(),
+            type: tx.type as "income" | "expense",
+            externalId: `demo_tx_${Date.now()}_${Math.random()}`,
+            isRecurring: false,
+            tags: null,
+          });
+        }
+      } catch (error) {
+        console.log('Demo data creation failed:', error);
+      }
+      
       req.login(user, (err) => {
         if (err) {
           return res.status(500).json({ message: 'Login failed after registration' });
@@ -417,6 +467,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get expense breakdown error:', error);
       res.status(500).json({ message: 'Failed to get expense breakdown' });
+    }
+  });
+
+  // Reports routes
+  app.get('/api/reports', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const reports = await storage.getReportsByUserId(user.id);
+      res.json(reports);
+    } catch (error) {
+      console.error('Get reports error:', error);
+      res.status(500).json({ message: 'Failed to get reports' });
+    }
+  });
+
+  app.post('/api/reports', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const reportData = {
+        userId: user.id,
+        type: req.body.type,
+        format: req.body.format,
+        data: req.body.data,
+        fileName: req.body.fileName,
+        generatedAt: new Date(),
+      };
+      
+      const report = await storage.createReport(reportData);
+      res.json(report);
+    } catch (error) {
+      console.error('Create report error:', error);
+      res.status(400).json({ message: 'Failed to create report' });
     }
   });
 

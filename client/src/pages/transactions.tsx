@@ -87,7 +87,9 @@ export default function Transactions() {
   const filteredTransactions = (transactions as Transaction[]).filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (transaction.category?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    const matchesCategory = categoryFilter === "all" || transaction.category === categoryFilter;
+    const matchesCategory = categoryFilter === "all" || 
+                           (categoryFilter === "uncategorized" && !transaction.category) ||
+                           transaction.category === categoryFilter;
     const matchesType = typeFilter === "all" || transaction.type === typeFilter;
     
     return matchesSearch && matchesCategory && matchesType;
@@ -235,7 +237,7 @@ export default function Transactions() {
                       {categories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
-                      <SelectItem value="">Uncategorized</SelectItem>
+                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -22,6 +22,7 @@ import {
   type InsertReport
 } from "@shared/schema";
 import { db } from "./db";
+import { mockStorage } from "./mock-storage";
 import { eq, and, desc, sum, avg, gte, lte } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -291,10 +292,8 @@ export class DatabaseStorage implements IStorage {
       .from(accounts)
       .where(eq(accounts.userId, userId));
     
-    const totalBalance = accountsData.reduce((sum, account) => 
-      sum + parseFloat(account.balance || "0"), 0);
-
-    // Get this month's transactions for burn and revenue calculation
+    const totalBalance = accountsData.reduce((sum: number, account: any) =>
+      sum + parseFloat(account.balance || "0"), 0);    // Get this month's transactions for burn and revenue calculation
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -311,12 +310,12 @@ export class DatabaseStorage implements IStorage {
       );
 
     const monthlyExpenses = monthlyTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+      .filter((t: any) => t.type === 'expense')
+      .reduce((sum: number, t: any) => sum + Math.abs(parseFloat(t.amount)), 0);
 
     const monthlyRevenue = monthlyTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      .filter((t: any) => t.type === 'income')
+      .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
 
     const monthlyBurn = monthlyExpenses - monthlyRevenue;
     const runwayMonths = monthlyBurn > 0 ? totalBalance / monthlyBurn : 999;
@@ -350,21 +349,21 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    const categoryTotals = expenseTransactions.reduce((acc, transaction) => {
+    const categoryTotals = expenseTransactions.reduce((acc: Record<string, number>, transaction: any) => {
       const category = transaction.category || 'Uncategorized';
       const amount = Math.abs(parseFloat(transaction.amount));
       acc[category] = (acc[category] || 0) + amount;
       return acc;
     }, {} as Record<string, number>);
 
-    const totalExpenses = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+    const totalExpenses = Object.values(categoryTotals).reduce((sum: number, amount: unknown) => sum + (amount as number), 0);
 
     return Object.entries(categoryTotals).map(([category, amount]) => ({
       category,
-      amount,
-      percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
+      amount: amount as number,
+      percentage: totalExpenses > 0 ? ((amount as number) / totalExpenses) * 100 : 0,
     }));
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = db ? new DatabaseStorage() : mockStorage;
